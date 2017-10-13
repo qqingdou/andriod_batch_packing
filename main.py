@@ -29,6 +29,7 @@ def build():
     parser.add_argument('--key_pass', default=key_pass_def)
     parser.add_argument('--key_alias', default=key_alias_def)
     parser.add_argument('--tsacert', default='0')
+    parser.add_argument('--andriod_name', default=andriod_name_def)
 
     args = parser.parse_args()
     channels = args.channels.strip()
@@ -44,6 +45,7 @@ def build():
     re_build_dir = os.path.join(output_dir, 're_package')
     signed_apk_dir = os.path.join(output_dir, 'sign_package')
     tsacert = args.tsacert.strip()
+    andriod_name = args.andriod_name.strip()
 
     if output_dir == '':
         raise Exception('output_dir is empty,please use --output_dir %s' % curr_dir)
@@ -75,6 +77,9 @@ def build():
     if key_alias == '':
         raise Exception('key_alias is empty,please use --key_alias %s' % key_alias_def)
 
+    if andriod_name == '':
+        raise Exception('andriod_name is empty,please use --andriod_name %s' % andriod_name_def)
+
     try:
         # 创建输出目录
         os.mkdir(output_dir)
@@ -99,16 +104,23 @@ def build():
 
             channel = channel.strip()
 
+            channel_info = '<meta-data android:name="%s" android:value="%s"/>\r\n' % (andriod_name, channel)
+
             print 'channel: %s is running to replace AndroidManifest.xml, please waiting...' % channel
 
             manifest_file = os.path.join(decode_dir, 'AndroidManifest.xml')
 
             temp_manifest = []
+            exists = False
             with open(manifest_file, 'r') as handle:
                 for line in handle.readlines():
-                    if line.find('HW_CHANNEL') > 0:
-                        temp_manifest.append('<meta-data android:name="HW_CHANNEL" android:value="%s"/>\r\n' % channel)
+                    if line.find(andriod_name) > 0:
+                        exists = True
+                        temp_manifest.append(channel_info)
                     else:
+                        if not exists and line.find('</application>') >= 0:
+                            temp_manifest.append(channel_info)
+
                         temp_manifest.append(line)
 
             with open(manifest_file, 'w') as handle:
